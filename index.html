@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Catur // Plengers Ed.</title>
+  <meta name="description" content="Game Catur Modern dengan Tema Cyberpunk, AI Bot, dan Online Multiplayer.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chess.js & Chessboard (atau engine mandiri yg dioptimalkan untuk single file) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+          colors: {
+            dark: '#030712', panel: 'rgba(17, 24, 39, 0.7)',
+            neon: { cyan: '#00F0FF', purple: '#8A2BE2', red: '#FF0055', green: '#00FF66', yellow: '#FFD700' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS -->
+  <style>
+    :root {
+      --board-size: clamp(320px, 90vw, 480px);
+      --cell-size: calc(var(--board-size) / 8);
+      --glass-border: rgba(0, 240, 255, 0.15);
+      --glass-bg: rgba(3, 7, 18, 0.7);
+    }
+    
+    body { background-color: #030712; color: #e5e7eb; overflow-x: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+    /* Backgrounds */
+    .bg-grid { position: fixed; inset: 0; z-index: -2; background-size: 50px 50px; background-image: linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px); mask-image: radial-gradient(circle at center, black 40%, transparent 100%); -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%); }
+    .bg-glow { position: fixed; top: -20%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 70%); z-index: -1; filter: blur(60px); pointer-events: none; }
+    .bg-glow-2 { position: fixed; bottom: -20%; right: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%); z-index: -1; filter: blur(60px); pointer-events: none; }
+
+    .glass-panel { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+
+    /* Buttons */
+    .btn-cyber { position: relative; background: transparent; border: 1px solid rgba(0, 240, 255, 0.3); color: #00F0FF; text-transform: uppercase; letter-spacing: 2px; overflow: hidden; transition: all 0.3s ease; }
+    .btn-cyber::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.2), transparent); transition: all 0.4s ease; }
+    .btn-cyber:hover { border-color: #00F0FF; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) inset, 0 0 15px rgba(0, 240, 255, 0.3); text-shadow: 0 0 8px #00F0FF; }
+    .btn-cyber:hover::before { left: 100%; }
+    .btn-cyber.active { background: rgba(0, 240, 255, 0.2); border-color: #00F0FF; box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+
+    /* Chess Board 8x8 */
+    .chess-container { width: var(--board-size); height: var(--board-size); display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border: 2px solid rgba(0, 240, 255, 0.3); border-radius: 8px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); margin: 0 auto; }
+    
+    .chess-square { width: var(--cell-size); height: var(--cell-size); display: flex; align-items: center; justify-content: center; font-size: calc(var(--cell-size) * 0.65); cursor: pointer; position: relative; transition: background 0.2s; }
+    .chess-square.light { background-color: rgba(30, 41, 59, 0.6); }
+    .chess-square.dark { background-color: rgba(15, 23, 42, 0.85); }
+    
+    .chess-square.selected { background-color: rgba(255, 0, 85, 0.4) !important; box-shadow: inset 0 0 10px rgba(255,0,85,0.8); }
+    .chess-square.hint::after { content: ''; width: 30%; height: 30%; background: #00FF66; border-radius: 50%; box-shadow: 0 0 10px #00FF66; position: absolute; }
+    .chess-square.hint-capture { box-shadow: inset 0 0 15px #FFD700; background-color: rgba(255, 215, 0, 0.3) !important; }
+
+    .piece { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transition: transform 0.2s; }
+    .piece:hover { transform: scale(1.1); }
+    .piece.white { color: #00F0FF; text-shadow: 0 0 10px rgba(0, 240, 255, 0.6); }
+    .piece.black { color: #8A2BE2; text-shadow: 0 0 10px rgba(138, 43, 226, 0.6); }
+
+    .text-gradient { background: linear-gradient(135deg, #00F0FF, #8A2BE2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .page { display: none; opacity: 0; transform: translateY(20px); transition: all 0.4s ease-out; }
+    .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 1; transform: translateY(0); width: 100%; }
+
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #030712; } ::-webkit-scrollbar-thumb { background: #00F0FF; border-radius: 10px; }
+    #particleCanvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+    #toastContainer { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast-msg { background: rgba(0,0,0,0.8); border: 1px solid #FF0055; color: #FF0055; padding: 10px 20px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; box-shadow: 0 0 15px rgba(255,0,85,0.4); }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col w-full">
+
+  <div class="bg-grid"></div><div class="bg-glow"></div><div class="bg-glow-2"></div>
+  <canvas id="particleCanvas"></canvas>
+  <div id="toastContainer"></div>
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 w-full z-50 glass-panel border-b border-t-0 border-l-0 border-r-0 px-4 md:px-6 py-4 flex justify-between items-center">
+    <div class="font-mono font-bold text-base md:text-lg tracking-wider cursor-pointer flex items-center gap-2" onclick="navTo('home')">
+      <span class="text-neon-cyan">sys</span>.<span class="text-white">chess</span>()
+    </div>
+    <div class="flex gap-4" id="navStatus"></div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow pt-24 pb-12 px-4 relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center justify-center">
+    
+    <!-- PAGE: HOME -->
+    <div id="page-home" class="page active w-full">
+      <div class="text-center mb-10 md:mb-12 w-full">
+        <h3 class="font-mono text-neon-cyan mb-2 tracking-widest text-xs md:text-sm uppercase">> init_sequence</h3>
+        <h1 class="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-4 font-sans tracking-tight break-words">
+          CATUR CYBER <br/><span class="text-gradient">PLENGERS ED.</span>
+        </h1>
+        <p class="text-gray-400 font-mono max-w-lg mx-auto text-xs md:text-sm px-4">Pertempuran taktik catur tingkat tinggi bernuansa masa depan.</p>
+        
+        <button onclick="showHowToPlay()" class="mt-6 px-4 py-2 border border-gray-600 rounded text-gray-300 font-mono text-xs hover:text-white hover:border-white transition-colors">
+          [?] BACA CARA BERMAIN
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full max-w-4xl mx-auto px-2">
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300 w-full">
+          <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🤖</div>
+          <h2 class="text-xl md:text-2xl font-bold mb-2">VS SYSTEM</h2>
+          <p class="text-xs text-gray-400 mb-6 font-mono">Tantang mesin AI dari level dasar hingga Impossible.</p>
+          <button onclick="openSetup('bot')" class="btn-cyber w-full py-3 rounded font-bold mt-auto text-sm">INITIATE</button>
+        </div>
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300 w-full">
+          <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">⚔️</div>
+          <h2 class="text-xl md:text-2xl font-bold mb-2">LOCAL DUEL</h2>
+          <p class="text-xs text-gray-400 mb-6 font-mono">Pertempuran 1v1 pada perangkat yang sama secara bergantian.</p>
+          <button onclick="openSetup('duel')" class="btn-cyber w-full py-3 rounded font-bold mt-auto text-sm">INITIATE</button>
+        </div>
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300 w-full sm:col-span-2 md:col-span-1">
+          <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🌐</div>
+          <h2 class="text-xl md:text-2xl font-bold mb-2">NETWORK</h2>
+          <p class="text-xs text-gray-400 mb-6 font-mono">Multiplayer Online via koneksi P2P real-time.</p>
+          <button onclick="openSetup('online')" class="btn-cyber w-full py-3 rounded font-bold mt-auto text-sm">INITIATE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: SETUP -->
+    <div id="page-setup" class="page w-full max-w-2xl px-2">
+      <div class="glass-panel p-6 md:p-8 rounded-3xl relative overflow-hidden w-full">
+        <button onclick="navTo('home')" class="absolute top-4 left-4 md:top-6 md:left-6 text-gray-400 hover:text-neon-cyan font-mono text-xs md:text-sm transition-colors">
+          < BACK
+        </button>
+        
+        <div class="text-center mb-8 pt-8 md:pt-6">
+          <h2 class="text-2xl md:text-3xl font-bold mb-2" id="setupTitle">CONFIGURE</h2>
+          <div class="h-1 w-20 bg-neon-cyan mx-auto rounded"></div>
+        </div>
+
+        <div class="mb-8">
+          <label class="block text-xs md:text-sm font-mono text-gray-400 mb-3 text-center">> SET_ASSISTANCE // Mode Petunjuk</label>
+          <div class="flex flex-col sm:flex-row gap-3 w-full">
+            <button id="btnHintOn" onclick="setHints(true)" class="btn-cyber active flex-1 py-3 rounded font-bold text-sm">DENGAN PETUNJUK</button>
+            <button id="btnHintOff" onclick="setHints(false)" class="btn-cyber flex-1 py-3 rounded font-bold text-sm text-gray-400 border-gray-600">TANPA PETUNJUK</button>
+          </div>
+          <p class="text-[10px] md:text-xs text-gray-500 font-mono mt-3 text-center">Menyorot langkah yang valid saat bidak dipilih.</p>
+        </div>
+
+        <div id="setupDynamicContent" class="w-full"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: PLAY (BOARD) -->
+    <div id="page-play" class="page w-full">
+      
+      <!-- Status Text -->
+      <div id="gameStatus" class="font-mono text-sm md:text-lg mb-4 h-8 flex items-center justify-center tracking-widest uppercase text-center w-full">
+        MENUNGGU SISTEM...
+      </div>
+
+      <!-- Chess Grid -->
+      <div class="chess-container" id="chessBoard"></div>
+
+      <!-- Controls -->
+      <div class="flex flex-wrap justify-center gap-3 mt-8 w-full px-2">
+        <button onclick="abortGame()" class="btn-cyber px-3 py-2 rounded font-mono text-xs md:text-sm text-neon-red border-neon-red hover:bg-red-900/30">ABORT_SESSION</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL: GENERAL -->
+  <div id="customModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0 pointer-events-none px-4">
+    <div class="glass-panel p-6 md:p-8 rounded-2xl max-w-md w-full text-center border-neon-cyan transform scale-95 transition-transform duration-300" id="modalBox">
+      <h2 id="modalTitle" class="text-2xl md:text-3xl font-bold mb-3 md:mb-4">TITLE</h2>
+      <div id="modalDesc" class="text-sm md:text-base text-gray-300 font-mono mb-6 md:mb-8 text-left leading-relaxed max-h-64 overflow-y-auto pr-2 custom-scrollbar"></div>
+      <div id="modalActions" class="flex flex-col sm:flex-row justify-center gap-3"></div>
+    </div>
+  </div>
+
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #00F0FF; border-radius: 10px; }
+  </style>
+
+  <!-- Script Logic -->
+  <script>
+    const AudioSys = {
+      ctx: null,
+      init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+      playTone(freq, type, duration, vol) {
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+          osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(); osc.stop(this.ctx.currentTime + duration);
+        } catch(e){}
+      },
+      click() { this.init(); this.playTone(800, 'sine', 0.1, 0.05); },
+      move() { this.init(); this.playTone(600, 'square', 0.1, 0.05); },
+      capture() { this.init(); this.playTone(1200, 'triangle', 0.15, 0.08); },
+      win() { this.init(); [440, 554, 659, 880].forEach((f, i) => setTimeout(() => this.playTone(f, 'sine', 0.3, 0.1), i * 150)); },
+      lose() { this.init(); [300, 250, 200].forEach((f, i) => setTimeout(() => this.playTone(f, 'sawtooth', 0.4, 0.1), i * 200)); },
+      alert() { this.init(); this.playTone(900, 'triangle', 0.1, 0.05); }
+    };
+
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast-msg';
+      toast.innerText = msg;
+      container.appendChild(toast);
+      AudioSys.alert();
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+    class Particle {
+      constructor(isWin = false, x, y, color) {
+        this.x = isWin ? x : Math.random() * canvas.width; this.y = isWin ? y : Math.random() * canvas.height;
+        this.vx = isWin ? (Math.random() - 0.5) * 10 : (Math.random() - 0.5) * 0.5;
+        this.vy = isWin ? (Math.random() - 0.5) * 10 : (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 2 + 1; this.color = color || (Math.random() > 0.5 ? '#00F0FF' : '#8A2BE2');
+        this.life = isWin ? 1 : Infinity; this.decay = isWin ? Math.random() * 0.02 + 0.01 : 0;
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.life !== Infinity) { this.life -= this.decay; this.vy += 0.2; }
+        else { if (this.x < 0 || this.x > canvas.width) this.vx *= -1; if (this.y < 0 || this.y > canvas.height) this.vy *= -1; }
+      }
+      draw() {
+        ctx.globalAlpha = this.life === Infinity ? 0.3 : Math.max(0, this.life);
+        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    function initParticles() { particles = []; for(let i=0; i<40; i++) particles.push(new Particle()); }
+    function winParticles(color) { const cx = canvas.width/2, cy = canvas.height/2; for(let i=0; i<100; i++) particles.push(new Particle(true, cx, cy, color)); }
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animateParticles);
+    }
+    initParticles(); animateParticles();
+
+    // --- GAME STATE (Chess.js Integration) ---
+    let game = new Chess();
+    let state = {
+      mode: '', difficulty: 'medium', useHints: true,
+      selectedSquare: null,
+      validMoves: [],
+      
+      peer: null, conn: null, roomId: '', isHost: false, myColor: 'w', connected: false
+    };
+
+    const unicodePieces = {
+      p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
+      P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
+    };
+
+    function navTo(pageId) {
+      AudioSys.click();
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+      if(pageId === 'home' && state.conn) {
+        state.conn.close(); state.peer.destroy(); state.connected = false;
+        document.getElementById('navStatus').innerHTML = '';
+      }
+    }
+
+    function setHints(val) {
+      AudioSys.click(); state.useHints = val;
+      document.getElementById('btnHintOn').className = val ? "btn-cyber active flex-1 py-3 rounded font-bold text-sm" : "btn-cyber flex-1 py-3 rounded font-bold text-sm text-gray-400 border-gray-600";
+      document.getElementById('btnHintOff').className = !val ? "btn-cyber active flex-1 py-3 rounded font-bold text-sm text-neon-red border-neon-red" : "btn-cyber flex-1 py-3 rounded font-bold text-sm text-gray-400 border-gray-600";
+    }
+
+    function openSetup(mode) {
+      state.mode = mode;
+      document.getElementById('setupTitle').innerText = mode.toUpperCase() + ' CONFIG';
+      const container = document.getElementById('setupDynamicContent');
+      let html = '';
+      
+      if(mode === 'bot') {
+        html = `
+          <label class="block text-xs md:text-sm font-mono text-gray-400 mb-3 text-center">> SET_DIFFICULTY // Kecerdasan Mesin AI</label>
+          <div class="grid grid-cols-2 gap-3 mb-4 w-full">
+            <button onclick="startGame('bot', 'easy')" class="btn-cyber py-3 rounded text-xs font-bold">EASY</button>
+            <button onclick="startGame('bot', 'medium')" class="btn-cyber py-3 rounded text-xs font-bold">MEDIUM</button>
+            <button onclick="startGame('bot', 'hard')" class="btn-cyber py-3 rounded text-xs font-bold">HARD</button>
+            <button onclick="startGame('bot', 'impossible')" class="btn-cyber py-3 rounded text-xs font-bold text-neon-red border-neon-red">IMPOSSIBLE</button>
+          </div>
+        `;
+      } else if (mode === 'duel') {
+        html = `<button onclick="startGame('duel')" class="btn-cyber w-full py-4 rounded font-bold text-base md:text-lg">START COMBAT</button>`;
+      } else if (mode === 'online') {
+        html = `
+          <div class="flex flex-col gap-5 w-full">
+            <div class="glass-panel p-4 border-neon-cyan/30 rounded-xl text-center">
+              <p class="text-xs font-mono text-gray-400 mb-2">CREATE_HOST (PUTIH)</p>
+              <button onclick="createRoom()" class="btn-cyber w-full py-3 rounded font-bold text-sm">GENERATE ROOM ID</button>
+            </div>
+            <div class="text-center font-mono text-gray-500 text-xs">--- OR ---</div>
+            <div class="glass-panel p-4 border-neon-purple/30 rounded-xl text-center">
+              <p class="text-xs font-mono text-gray-400 mb-2">JOIN_NETWORK (HITAM)</p>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="joinId" placeholder="4 DIGIT ID" maxlength="4" class="w-full bg-black/50 border border-gray-600 rounded px-4 py-3 text-center font-mono uppercase text-white focus:outline-none focus:border-neon-purple">
+                <button onclick="joinRoom()" class="btn-cyber w-full sm:w-auto px-6 py-3 rounded font-bold bg-neon-purple/10 border-neon-purple text-neon-purple hover:bg-neon-purple/30 hover:text-white">JOIN</button>
+              </div>
+            </div>
+          </div>
+          <div id="onlineStatus" class="mt-4 font-mono text-xs md:text-sm text-center text-neon-cyan hidden"></div>
+        `;
+      }
+      container.innerHTML = html; navTo('setup');
+    }
+
+    function showHowToPlay() {
+      AudioSys.click();
+      const content = `
+        <ul class="list-disc pl-4 space-y-3 text-sm text-gray-300 font-sans">
+          <li><strong>Tujuan:</strong> Lakukan Skakmat (Checkmate) pada Raja lawan untuk memenangkan pertempuran.</li>
+          <li><strong>Bidak (Pieces):</strong> Pion bergerak maju, Kuda melompat pola 'L', Gajah diagonal, Benteng lurus, Menteri bebas lurus/diagonal, Raja 1 langkah segala arah.</li>
+          <li>Gunakan fitur <em>Petunjuk (Hints)</em> di menu setup untuk melihat jalur langkah legal saat Anda menyentuh bidak.</li>
+        </ul>
+      `;
+      showModal("CARA BERMAIN", content, `<button onclick="hideModal()" class="btn-cyber w-full px-6 py-2 rounded">MENGERTI</button>`);
+    }
+
+    function startGame(mode, diff = 'medium') {
+      state.mode = mode; state.difficulty = diff;
+      game.reset(); state.selectedSquare = null; state.validMoves = [];
+      renderBoard(); updateStatusText(); navTo('play');
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('chessBoard');
+      boardEl.innerHTML = '';
+      
+      const board = game.board();
+      const isFlipped = (state.mode === 'online' && state.myColor === 'b');
+      
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const actualR = isFlipped ? 7 - r : r;
+          const actualC = isFlipped ? 7 - c : c;
+          const squareNames = ['a','b','c','d','e','f','g','h'];
+          const sqId = squareNames[actualC] + (8 - actualR);
+          
+          const square = document.createElement('div');
+          square.className = `chess-square ${(actualR + actualC) % 2 === 0 ? 'light' : 'dark'}`;
+          square.dataset.square = sqId;
+          
+          const piece = board[actualR][actualC];
+          if (piece) {
+            const span = document.createElement('span');
+            span.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+            span.innerText = unicodePieces[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+            square.appendChild(span);
+          }
+
+          if (state.selectedSquare === sqId) {
+            square.classList.add('selected');
+          }
+
+          if (state.useHints && state.validMoves.includes(sqId)) {
+            if (piece) square.classList.add('hint-capture');
+            else square.classList.add('hint');
+          }
+
+          square.onclick = () => handleSquareClick(sqId);
+          boardEl.appendChild(square);
+        }
+      }
+    }
+
+    function handleSquareClick(sq) {
+      if (game.game_over()) return;
+      if (state.mode === 'bot' && game.turn() === 'b') return;
+      if (state.mode === 'online' && game.turn() !== state.myColor) return;
+
+      const piece = game.get(sq);
+
+      // Jika sudah ada yang dipilih dan klik petunjuk langkah
+      if (state.selectedSquare && state.validMoves.includes(sq)) {
+        executeMove({ from: state.selectedSquare, to: sq, promotion: 'q' });
+        if (state.mode === 'online') broadcast({ type: 'move', move: { from: state.selectedSquare, to: sq, promotion: 'q' } });
+        return;
+      }
+
+      // Jika klik bidak sendiri
+      if (piece && piece.color === game.turn()) {
+        state.selectedSquare = sq;
+        const legalMoves = game.moves({ square: sq, verbose: true });
+        state.validMoves = legalMoves.map(m => m.to);
+        AudioSys.alert();
+        renderBoard();
+        return;
+      }
+
+      // Klik sembarang reset seleksi
+      state.selectedSquare = null;
+      state.validMoves = [];
+      renderBoard();
+    }
+
+    function executeMove(moveObj, isFromNetwork = false) {
+      const move = game.move(moveObj);
+      if (move) {
+        if (move.captured) AudioSys.capture(); else AudioSys.move();
+        state.selectedSquare = null; state.validMoves = [];
+        renderBoard(); updateStatusText();
+
+        if (game.game_over()) {
+          handleGameOver();
+          return;
+        }
+
+        if (state.mode === 'bot' && game.turn() === 'b' && !isFromNetwork) {
+          document.getElementById('gameStatus').innerHTML = '<span class="animate-pulse text-neon-purple">AI BERPIKIR...</span>';
+          setTimeout(makeBotMove, 600);
+        }
+      }
+    }
+
+    function handleGameOver() {
+      let msg = "PERMAINAN SELESAI";
+      if (game.in_checkmate()) {
+        const winner = game.turn() === 'w' ? 'Hitam (O)' : 'Putih (X)';
+        msg = `SKAKMAT! Pemenang: ${winner}`;
+        AudioSys.win(); winParticles(winner.includes('Putih') ? '#00F0FF' : '#8A2BE2');
+      } else if (game.in_draw()) {
+        msg = "REMIS / SERI (DRAW)";
+        AudioSys.lose();
+      }
+
+      if (state.mode === 'online') {
+        showModal("GAME OVER", msg, `<button onclick="abortGame()" class="btn-cyber px-6 py-2 rounded">KELUAR</button>`);
+      } else {
+        document.getElementById('gameStatus').innerHTML = `<span class="text-neon-yellow">${msg}</span>`;
+      }
+    }
+
+    function updateStatusText() {
+      if (game.game_over()) return;
+      const el = document.getElementById('gameStatus');
+      const turn = game.turn() === 'w' ? 'PUTIH (X)' : 'HITAM (O)';
+      const color = game.turn() === 'w' ? 'text-neon-cyan' : 'text-neon-purple';
+      
+      let checkStr = game.in_check() ? ' (SKAK!)' : '';
+
+      if (state.mode === 'online') {
+        if (game.turn() === state.myColor) el.innerHTML = `<span class="${color}">> GILIRAN ANDA${checkStr}</span>`;
+        else el.innerHTML = `<span class="text-gray-500">> MENUNGGU LAWAN...</span>`;
+      } else {
+        el.innerHTML = `<span class="${color}">> GILIRAN: ${turn}${checkStr}</span>`;
+      }
+    }
+
+    function abortGame() {
+      AudioSys.click();
+      if (state.mode === 'online' && state.conn) broadcast({ type: 'abort' });
+      hideModal(); navTo('home');
+    }
+
+    // --- BOT AI CHESS LOGIC ---
+    function makeBotMove() {
+      if (game.game_over()) return;
+      const moves = game.moves({ verbose: true });
+      if (moves.length === 0) return;
+
+      let chosenMove;
+      const diff = state.difficulty;
+
+      if (diff === 'easy') {
+        chosenMove = moves[Math.floor(Math.random() * moves.length)];
+      } else if (diff === 'medium') {
+        // Prioritaskan makan bidak jika ada
+        const captures = moves.filter(m => m.captured);
+        chosenMove = captures.length > 0 && Math.random() < 0.7 ? captures[Math.floor(Math.random() * captures.length)] : moves[Math.floor(Math.random() * moves.length)];
+      } else {
+        // Hard / Impossible (Minimax sederhana depth 2-3)
+        chosenMove = minimaxRoot(diff === 'impossible' ? 3 : 2, true);
+      }
+
+      executeMove(chosenMove);
+    }
+
+    function minimaxRoot(depth, isMaximizing) {
+      const moves = game.moves({ verbose: true });
+      let bestValue = -9999;
+      let bestMove = moves[0];
+
+      for (let i = 0; i < moves.length; i++) {
+        let move = moves[i];
+        game.move(move);
+        let value = minimax(depth - 1, -10000, 10000, !isMaximizing);
+        game.undo();
+        if (value > bestValue) {
+          bestValue = value;
+          bestMove = move;
+        }
+      }
+      return bestMove;
+    }
+
+    function minimax(depth, alpha, beta, isMaximizing) {
+      if (depth === 0) return -evaluateBoard(game.board());
+      const moves = game.moves({ verbose: true });
+      if (isMaximizing) {
+        let bestValue = -9999;
+        for (let i = 0; i < moves.length; i++) {
+          game.move(moves[i]);
+          bestValue = Math.max(bestValue, minimax(depth - 1, alpha, beta, !isMaximizing));
+          game.undo();
+          alpha = Math.max(alpha, bestValue);
+          if (beta <= alpha) return bestValue;
+        }
+        return bestValue;
+      } else {
+        let bestValue = 9999;
+        for (let i = 0; i < moves.length; i++) {
+          game.move(moves[i]);
+          bestValue = Math.min(bestValue, minimax(depth - 1, alpha, beta, !isMaximizing));
+          game.undo();
+          beta = Math.min(beta, bestValue);
+          if (beta <= alpha) return bestValue;
+        }
+        return bestValue;
+      }
+    }
+
+    function evaluateBoard(board) {
+      let totalEvaluation = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          let piece = board[r][c];
+          if (piece) totalEvaluation += getPieceValue(piece);
+        }
+      }
+      return totalEvaluation;
+    }
+
+    function getPieceValue(piece) {
+      const val = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+      let weight = val[piece.type] || 0;
+      return piece.color === 'w' ? weight : -weight;
+    }
+
+
+    // --- ONLINE PEER.JS LOGIC ---
+    const PEER_PREFIX = "plengers-cyber-chess-v1-";
+    function generateId() { return Math.floor(1000 + Math.random() * 9000).toString(); }
+
+    function initPeer(idStr) {
+      if(state.peer) state.peer.destroy();
+      const config = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
+      state.peer = new Peer(idStr ? PEER_PREFIX + idStr : undefined, config);
+      state.peer.on('error', err => {
+        let msg = "KONEKSI GAGAL";
+        if(err.type === 'unavailable-id') msg = "ID BENTROK";
+        if(err.type === 'peer-unavailable') msg = "ROOM TIDAK DITEMUKAN";
+        document.getElementById('onlineStatus').innerHTML = `<span class="text-neon-red">ERR: ${msg}</span>`;
+      });
+      return state.peer;
+    }
+
+    function createRoom() {
+      AudioSys.click(); const id = generateId(); state.roomId = id; state.isHost = true; state.myColor = 'w';
+      document.getElementById('onlineStatus').innerHTML = 'MEMBUAT ROOM...'; document.getElementById('onlineStatus').classList.remove('hidden');
+      const peer = initPeer(id);
+      peer.on('open', () => {
+        document.getElementById('onlineStatus').innerHTML = `ROOM ID: <span class="text-2xl font-bold text-white">${id}</span> <br><span class="text-xs text-gray-500 animate-pulse mt-2 block">MENUNGGU LAWAN...</span>`;
+      });
+      peer.on('connection', conn => { state.conn = conn; setupConnection(); });
+    }
+
+    function joinRoom() {
+      AudioSys.click(); const id = document.getElementById('joinId').value.trim();
+      if(id.length !== 4) return alert("ID harus 4 digit angka");
+      state.isHost = false; state.myColor = 'b';
+      document.getElementById('onlineStatus').innerHTML = 'MENYAMBUNGKAN...'; document.getElementById('onlineStatus').classList.remove('hidden');
+      const peer = initPeer();
+      peer.on('open', () => { state.conn = peer.connect(PEER_PREFIX + id, { reliable: true }); setupConnection(); });
+    }
+
+    function setupConnection() {
+      const conn = state.conn;
+      conn.on('open', () => {
+        state.connected = true;
+        document.getElementById('navStatus').innerHTML = `<span class="bg-neon-green/20 text-neon-green px-2 py-1 rounded text-xs font-mono border border-neon-green/50 shadow-[0_0_10px_rgba(0,255,102,0.3)] hidden md:block">NETWORK: TERHUBUNG</span>`;
+        if(state.isHost) {
+          setTimeout(() => {
+            conn.send({ type: 'start', fen: game.fen() }); 
+            startOnlineGame(); 
+          }, 500);
+        } else {
+          document.getElementById('onlineStatus').innerHTML = '<span class="text-neon-green">TERHUBUNG. MENYINKRONKAN...</span>';
+        }
+      });
+
+      conn.on('data', data => {
+        if(data.type === 'start') { 
+          game.load(data.fen);
+          startOnlineGame(); 
+        }
+        else if (data.type === 'move') { 
+          executeMove(data.move, true);
+        }
+        else if (data.type === 'abort') { showModal("LAWAS KELUAR", "Koneksi diputus oleh lawan.", `<button onclick="abortGame()" class="btn-cyber px-6 py-2 rounded">KELUAR</button>`); }
+      });
+      conn.on('close', () => { if(!game.game_over()) showModal("KONEKSI TERPUTUS", "Jaringan terputus.", `<button onclick="abortGame()" class="btn-cyber px-6 py-2 rounded">KELUAR</button>`); });
+    }
+
+    function broadcast(data) { if(state.conn && state.conn.open) state.conn.send(data); }
+    function startOnlineGame() {
+      renderBoard(); updateStatusText(); navTo('play');
+      document.getElementById('navStatus').innerHTML = `<span class="bg-panel px-2 py-1 rounded text-xs font-mono border border-gray-600">WARNA: ${state.myColor === 'w' ? 'PUTIH (X)' : 'HITAM (O)'}</span>`;
+    }
+
+    function showModal(title, descHtml, actionsHtml) {
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalDesc').innerHTML = descHtml;
+      document.getElementById('modalActions').innerHTML = actionsHtml;
+      const modal = document.getElementById('customModal'), box = document.getElementById('modalBox');
+      modal.classList.remove('pointer-events-none', 'opacity-0'); box.classList.remove('scale-95'); box.classList.add('scale-100');
+    }
+    function hideModal() {
+      const modal = document.getElementById('customModal'), box = document.getElementById('modalBox');
+      modal.classList.add('pointer-events-none', 'opacity-0'); box.classList.remove('scale-100'); box.classList.add('scale-95');
+    }
+
+    const script = document.createElement('script'); script.src = "https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"; document.head.appendChild(script);
+  </script>
+</body>
+</html>
+
