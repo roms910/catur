@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plengers Games Hub // Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+          colors: { dark: '#030712', neon: { cyan: '#00F0FF', purple: '#8A2BE2', red: '#FF0055', green: '#00FF66' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #030712; color: #e5e7eb; overflow-x: hidden; }
+    .bg-grid { position: fixed; inset: 0; z-index: -2; background-size: 50px 50px; background-image: linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px); }
+    .bg-glow { position: fixed; top: -20%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 70%); z-index: -1; filter: blur(60px); pointer-events: none; }
+    .bg-glow-2 { position: fixed; bottom: -20%; right: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%); z-index: -1; filter: blur(60px); pointer-events: none; }
+    .glass-card { background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(0, 240, 255, 0.15); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .glass-card:hover { border-color: #00F0FF; box-shadow: 0 0 25px rgba(0, 240, 255, 0.3); transform: translateY(-8px); }
+    .text-gradient { background: linear-gradient(135deg, #00F0FF, #8A2BE2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    #particleCanvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6 antialiased">
+  <div class="bg-grid"></div><div class="bg-glow"></div><div class="bg-glow-2"></div>
+  <canvas id="particleCanvas"></canvas>
+
+  <div class="text-center mb-12 max-w-2xl">
+    <div class="inline-block px-3 py-1 mb-4 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-400 font-mono text-xs uppercase tracking-widest animate-pulse">
+      > system_online // secure_hub
+    </div>
+    <h1 class="text-4xl sm:text-6xl font-extrabold mb-4 font-sans tracking-tight">
+      PLENGERS <span class="text-gradient">GAMES HUB</span>
+    </h1>
+    <p class="text-gray-400 font-mono text-xs sm:text-sm">Pilih modul simulasi pertempuran taktis berbasis jaringan dan kecerdasan buatan.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
+    <!-- Catur -->
+    <a href="/ctr" class="glass-card p-6 rounded-3xl text-center flex flex-col items-center group">
+      <div class="text-5xl mb-4 group-hover:scale-125 transition-transform duration-300">♟️</div>
+      <h2 class="text-xl font-bold font-mono mb-2 text-cyan-400">CATUR CYBER</h2>
+      <p class="text-xs text-gray-400 font-mono mb-6">Taktik papan 8x8 dengan multi-skin dan Minimax AI.</p>
+      <span class="mt-auto px-4 py-2 border border-cyan-500/40 rounded-xl text-cyan-400 font-mono text-xs group-hover:bg-cyan-500/10 transition-colors">LAUNCH ></span>
+    </a>
+    <!-- Tic Tac Toe -->
+    <a href="/ttt" class="glass-card p-6 rounded-3xl text-center flex flex-col items-center group">
+      <div class="text-5xl mb-4 group-hover:scale-125 transition-transform duration-300">❌</div>
+      <h2 class="text-xl font-bold font-mono mb-2 text-purple-400">TIC TAC TOE</h2>
+      <p class="text-xs text-gray-400 font-mono mb-6">Minimax sempurna & protokol moving pieces.</p>
+      <span class="mt-auto px-4 py-2 border border-purple-500/40 rounded-xl text-purple-400 font-mono text-xs group-hover:bg-purple-500/10 transition-colors">LAUNCH ></span>
+    </a>
+    <!-- Dam-daman -->
+    <a href="/dd" class="glass-card p-6 rounded-3xl text-center flex flex-col items-center group">
+      <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🎯</div>
+      <h2 class="text-xl font-bold font-mono mb-2 text-green-400">DAM-DAMAN</h2>
+      <p class="text-xs text-gray-400 font-mono mb-6">Permainan tradisional dengan kombo makan beruntun.</p>
+      <span class="mt-auto px-4 py-2 border border-green-500/40 rounded-xl text-green-400 font-mono text-xs group-hover:bg-green-500/10 transition-colors">LAUNCH ></span>
+    </a>
+  </div>
+
+  <footer class="mt-16 text-center font-mono text-xs text-gray-600">
+    PLENGERS ARCHITECTURE &copy; 2026 // ALL RIGHTS RESERVED
+  </footer>
+
+  <script>
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    for(let i=0; i<40; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: (Math.random()-0.5)*0.4, vy: (Math.random()-0.5)*0.4, size: Math.random()*2+1 });
+    function loop() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.3)';
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if(p.x<0||p.x>canvas.width)p.vx*=-1; if(p.y<0||p.y>canvas.height)p.vy*=-1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
+</body>
+</html>
+
