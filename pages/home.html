@@ -1,95 +1,106 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plengers Games Hub // Terminal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <title>Plengers Games Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
-          colors: { dark: '#030712', neon: { cyan: '#00F0FF', purple: '#8A2BE2', red: '#FF0055', green: '#00FF66' } }
-        }
-      }
+      darkMode: ['class', '[data-theme="dark"]'],
+      theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['Space Mono', 'monospace'] } } }
     }
   </script>
   <style>
-    body { background-color: #030712; color: #e5e7eb; overflow-x: hidden; }
-    .bg-grid { position: fixed; inset: 0; z-index: -2; background-size: 50px 50px; background-image: linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px); }
-    .bg-glow { position: fixed; top: -20%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 70%); z-index: -1; filter: blur(60px); pointer-events: none; }
-    .bg-glow-2 { position: fixed; bottom: -20%; right: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%); z-index: -1; filter: blur(60px); pointer-events: none; }
-    .glass-card { background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(0, 240, 255, 0.15); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    .glass-card:hover { border-color: #00F0FF; box-shadow: 0 0 25px rgba(0, 240, 255, 0.3); transform: translateY(-8px); }
-    .text-gradient { background: linear-gradient(135deg, #00F0FF, #8A2BE2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    #particleCanvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-  </style>
+    :root {
+      --bg: #0A0E14; --bg-soft: #0D1420; --card: rgba(255,255,255,0.03); --card-border: rgba(94,234,212,0.16);
+      --text: #E8EAED; --text-dim: #8B93A0; --text-faint: #5C6672; --mint: #5EEAD4; --blue: #4C8DFF;
+      --shadow: 0 20px 60px rgba(0,0,0,0.45); --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    [data-theme="light"] {
+      --bg: #F3F4F6; --bg-soft: #EAECEF; --card: rgba(255,255,255,0.75); --card-border: rgba(13,59,46,0.14);
+      --text: #12161C; --text-dim: #4A5261; --text-faint: #7A8291; --mint: #0D9488; --blue: #2563EB;
+      --shadow: 0 20px 50px rgba(20,30,40,0.10);
+    }
+    body { background: var(--bg); color: var(--text); transition: background .5s var(--ease), color .5s var(--ease); overflow-x: hidden; }
+    .bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(94,234,212,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(94,234,212,0.035) 1px, transparent 1px); background-size: 48px 48px; pointer-events: none; z-index: -2; }
+    .bg-glow { position: fixed; inset: 0; z-index: -1; pointer-events:none; background: radial-gradient(circle at 85% 10%, rgba(94,234,212,0.08), transparent 40%), radial-gradient(circle at 10% 90%, rgba(76,141,255,0.06), transparent 45%); }
+    
+    .topnav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 16px clamp(16px, 5vw, 64px); background: color-mix(in srgb, var(--bg) 75%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--card-border); }
+    .theme-toggle { display: flex; gap: 8px; background: var(--card); border: 1px solid var(--card-border); border-radius: 99px; padding: 4px; cursor: pointer; }
+    .theme-toggle .icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: .4s; color: var(--text-faint); }
+    .theme-toggle .icon.on { background: var(--mint); color: #0A0E14; }
+    
+    .glass-card { background: var(--card); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 20px; box-shadow: var(--shadow); transition: transform .3s var(--ease), border-color .3s var(--ease); text-decoration: none; color: inherit; display: block; }
+    .glass-card:hover { border-color: var(--mint); transform: translateY(-5px); }
+    
+    .btn { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 12px; background: var(--mint); color: #06141C; display: inline-flex; justify-content: center; width: 100%; margin-top: auto; transition: .3s; }
+    .btn:hover { filter: brightness(1.1); box-shadow: 0 4px 15px rgba(94,234,212,0.3); }
+    
+    .eyebrow { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; color: var(--mint); text-transform: uppercase; margin-bottom: 16px; }
+    .eyebrow::before { content: '<'; opacity: 0.6; } .eyebrow::after { content: '/>'; opacity: 0.6; }
+    
+    #loading { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity .5s; opacity: 1; pointer-events: none; }
+    .loader-ring { width: 40px; height: 40px; border: 3px solid var(--card-border); border-top-color: var(--mint); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </script>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-6 antialiased">
-  <div class="bg-grid"></div><div class="bg-glow"></div><div class="bg-glow-2"></div>
-  <canvas id="particleCanvas"></canvas>
+<body class="antialiased min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4">
+  <div class="bg-grid"></div><div class="bg-glow"></div>
+  <div id="loading"><div class="loader-ring"></div><div class="font-mono text-xs text-[var(--mint)] animate-pulse">SISTEM MEMUAT...</div></div>
 
-  <div class="text-center mb-12 max-w-2xl">
-    <div class="inline-block px-3 py-1 mb-4 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-400 font-mono text-xs uppercase tracking-widest animate-pulse">
-      > system_online // secure_hub
+  <nav class="topnav">
+    <div class="font-mono font-bold text-[var(--text)]"><span class="text-[var(--mint)]">const</span> games = "hub"</div>
+    <button class="theme-toggle" id="themeToggle">
+      <div class="icon on" id="iMoon"><svg width="15" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div>
+      <div class="icon" id="iSun"><svg width="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
+    </button>
+  </nav>
+
+  <main class="w-full max-w-6xl mx-auto flex flex-col items-center">
+    <div class="text-center mb-12">
+      <div class="eyebrow">select_module</div>
+      <h1 class="font-display text-4xl md:text-6xl font-extrabold mb-4">PLENGERS <span class="text-[var(--mint)]">GAMES</span></h1>
+      <p class="text-[var(--text-dim)] font-mono text-sm max-w-lg mx-auto">Pilih simulasi permainan taktis. Diperbarui untuk performa maksimal.</p>
     </div>
-    <h1 class="text-4xl sm:text-6xl font-extrabold mb-4 font-sans tracking-tight">
-      PLENGERS <span class="text-gradient">GAMES HUB</span>
-    </h1>
-    <p class="text-gray-400 font-mono text-xs sm:text-sm">Pilih modul simulasi pertempuran taktis berbasis jaringan dan kecerdasan buatan.</p>
-  </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
-    <!-- Catur -->
-    <a href="/ctr" class="glass-card p-6 rounded-3xl text-center flex flex-col items-center group">
-      <div class="text-5xl mb-4 group-hover:scale-125 transition-transform duration-300">♟️</div>
-      <h2 class="text-xl font-bold font-mono mb-2 text-cyan-400">CATUR CYBER</h2>
-      <p class="text-xs text-gray-400 font-mono mb-6">Taktik papan 8x8 dengan multi-skin dan Minimax AI.</p>
-      <span class="mt-auto px-4 py-2 border border-cyan-500/40 rounded-xl text-cyan-400 font-mono text-xs group-hover:bg-cyan-500/10 transition-colors">LAUNCH ></span>
-    </a>
-    <!-- Tic Tac Toe -->
-    <a href="/ttt" class="glass-card p-6 rounded-3xl text-center flex flex-col items-center group">
-      <div class="text-5xl mb-4 group-hover:scale-125 transition-transform duration-300">❌</div>
-      <h2 class="text-xl font-bold font-mono mb-2 text-purple-400">TIC TAC TOE</h2>
-      <p class="text-xs text-gray-400 font-mono mb-6">Minimax sempurna & protokol moving pieces.</p>
-      <span class="mt-auto px-4 py-2 border border-purple-500/40 rounded-xl text-purple-400 font-mono text-xs group-hover:bg-purple-500/10 transition-colors">LAUNCH ></span>
-    </a>
-    <!-- Dam-daman -->
-    <a href="/dd" class="glass-card p-6 rounded-3xl text-center flex flex-col items-center group">
-      <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🎯</div>
-      <h2 class="text-xl font-bold font-mono mb-2 text-green-400">DAM-DAMAN</h2>
-      <p class="text-xs text-gray-400 font-mono mb-6">Permainan tradisional dengan kombo makan beruntun.</p>
-      <span class="mt-auto px-4 py-2 border border-green-500/40 rounded-xl text-green-400 font-mono text-xs group-hover:bg-green-500/10 transition-colors">LAUNCH ></span>
-    </a>
-  </div>
-
-  <footer class="mt-16 text-center font-mono text-xs text-gray-600">
-    PLENGERS ARCHITECTURE &copy; 2026 // ALL RIGHTS RESERVED
-  </footer>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-2">
+      <a href="/ctr" class="glass-card p-6 flex flex-col items-center text-center group min-h-[280px]">
+        <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">♟️</div>
+        <h2 class="text-xl font-display font-bold mb-2">Catur Cyber</h2>
+        <p class="text-xs text-[var(--text-faint)] font-mono mb-6">Taktik 8x8. Multi-skin & Minimax AI.</p>
+        <span class="btn">INITIATE</span>
+      </a>
+      <a href="/ular" class="glass-card p-6 flex flex-col items-center text-center group min-h-[280px]">
+        <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🐍</div>
+        <h2 class="text-xl font-display font-bold mb-2">Ular Tangga</h2>
+        <p class="text-xs text-[var(--text-faint)] font-mono mb-6">Balapan 1-100. Penuh kejutan & multiplayer.</p>
+        <span class="btn">INITIATE</span>
+      </a>
+      <a href="/ttt" class="glass-card p-6 flex flex-col items-center text-center group min-h-[280px]">
+        <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">❌</div>
+        <h2 class="text-xl font-display font-bold mb-2">Tic Tac Toe</h2>
+        <p class="text-xs text-[var(--text-faint)] font-mono mb-6">Aturan klasik & mode 'Moving Pieces'.</p>
+        <span class="btn">INITIATE</span>
+      </a>
+      <a href="/dd" class="glass-card p-6 flex flex-col items-center text-center group min-h-[280px]">
+        <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🎯</div>
+        <h2 class="text-xl font-display font-bold mb-2">Dam-daman</h2>
+        <p class="text-xs text-[var(--text-faint)] font-mono mb-6">Strategi 5x5 dengan combo makan beruntun.</p>
+        <span class="btn">INITIATE</span>
+      </a>
+    </div>
+  </main>
 
   <script>
-    const canvas = document.getElementById('particleCanvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-    for(let i=0; i<40; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: (Math.random()-0.5)*0.4, vy: (Math.random()-0.5)*0.4, size: Math.random()*2+1 });
-    function loop() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = 'rgba(0, 240, 255, 0.3)';
-      particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        if(p.x<0||p.x>canvas.width)p.vx*=-1; if(p.y<0||p.y>canvas.height)p.vy*=-1;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-      });
-      requestAnimationFrame(loop);
-    }
-    loop();
+    window.onload = () => { setTimeout(() => { document.getElementById('loading').style.opacity = '0'; }, 300); };
+    document.getElementById('themeToggle').onclick = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('iMoon').classList.toggle('on', !isDark);
+      document.getElementById('iSun').classList.toggle('on', isDark);
+    };
   </script>
 </body>
 </html>
