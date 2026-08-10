@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loading // Memuat Modul</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #030712; color: #e5e7eb; font-family: 'JetBrains Mono', monospace; }
+    .spinner { width: 50px; height: 50px; border: 3px solid rgba(0, 240, 255, 0.1); border-top-color: #00F0FF; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6">
+  <div class="flex flex-col items-center gap-6">
+    <div class="spinner"></div>
+    <div class="text-cyan-400 text-xs tracking-widest uppercase animate-pulse">
+      > memuat_aset_sistem...
+    </div>
+  </div>
+</body>
+</html>
+
