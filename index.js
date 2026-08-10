@@ -31,7 +31,7 @@ app.use((req, res, next) => {
         return res.status(503).json({ error: 'Server is in cooldown, try again later.' });
     }
     requestCount++;
-    if (requestCount > 25) {
+    if (requestCount > 35) { // Sedikit dilonggarkan untuk assets
         isCooldown = true;
         setTimeout(() => { isCooldown = false; }, 10000);
         return res.status(503).json({ error: 'Too many requests, server cooldown!' });
@@ -48,33 +48,6 @@ app.use(cors());
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/favicon.png', (req, res) => res.status(204).end());
 
-try {
-    const settingsPath = path.join(__dirname, './assets/settings.json');
-    if(fs.existsSync(settingsPath)) {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        global.apikey = settings.apiSettings.apikey;
-    }
-} catch(e) {}
-
-app.use((req, res, next) => {
-    if (req.path === '/favicon.ico' || req.path === '/favicon.png') return next();
-    const start = Date.now();
-    const originalJson = res.json;
-
-    res.json = function (data) {
-        if (data && typeof data === 'object') {
-            const responseData = { status: data.status, creator: "Romzz", ...data };
-            return originalJson.call(this, responseData);
-        }
-        return originalJson.call(this, data);
-    };
-
-    res.on('finish', () => {
-        logRequest({ method: req.method, status: res.statusCode, url: req.originalUrl, duration: Date.now() - start });
-    });
-    next();
-});
-
 // ==========================================
 // DIRECTORY STRUCTURE GENERATOR & ROUTING
 // ==========================================
@@ -84,55 +57,12 @@ const pagesDir = path.join(__dirname, 'pages');
 if (!fs.existsSync(gamesDir)) fs.mkdirSync(gamesDir, { recursive: true });
 if (!fs.existsSync(pagesDir)) fs.mkdirSync(pagesDir, { recursive: true });
 
-// Auto-create default home.html jika belum ada
-const homePath = path.join(pagesDir, 'home.html');
-if (!fs.existsSync(homePath)) {
-    const defaultHome = `<!DOCTYPE html>
-<html lang="id" class="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plengers Games Hub</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background-color: #030712; color: #e5e7eb; font-family: 'Inter', sans-serif; }
-    .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(0, 240, 255, 0.2); }
-    .btn-glow:hover { box-shadow: 0 0 25px rgba(0, 240, 255, 0.5); border-color: #00F0FF; }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col items-center justify-center p-6">
-  <div class="text-center mb-12">
-    <h1 class="font-mono text-4xl md:text-6xl font-extrabold mb-3">PLENGERS <span class="text-cyan-400">GAMES HUB</span></h1>
-    <p class="text-gray-400 font-mono text-sm">Pilih sistem simulasi permainan taktis yang ingin diinisialisasi.</p>
-  </div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
-    <a href="/ctr" class="glass p-6 rounded-2xl text-center btn-glow transition-all group">
-      <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">♟️</div>
-      <h2 class="text-2xl font-bold font-mono mb-2 text-cyan-400">CATUR</h2>
-      <p class="text-xs text-gray-400 font-mono">Cyber Chess Tactics & Multi-Skin.</p>
-    </a>
-    <a href="/ttt" class="glass p-6 rounded-2xl text-center btn-glow transition-all group">
-      <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">❌</div>
-      <h2 class="text-2xl font-bold font-mono mb-2 text-purple-400">TIC TAC TOE</h2>
-      <p class="text-xs text-gray-400 font-mono">Minimax AI & Moving Pieces.</p>
-    </a>
-    <a href="/dd" class="glass p-6 rounded-2xl text-center btn-glow transition-all group">
-      <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
-      <h2 class="text-2xl font-bold font-mono mb-2 text-green-400">DAM-DAMAN</h2>
-      <p class="text-xs text-gray-400 font-mono">Checkers with Multi-Jump Combo.</p>
-    </a>
-  </div>
-</body>
-</html>`;
-    fs.writeFileSync(homePath, defaultHome);
-}
-
 // Routes utama dan game
-app.get('/', (req, res) => res.sendFile(homePath));
+app.get('/', (req, res) => res.sendFile(path.join(pagesDir, 'home.html')));
 app.get('/ctr', (req, res) => res.sendFile(path.join(gamesDir, 'ctr.html')));
 app.get('/ttt', (req, res) => res.sendFile(path.join(gamesDir, 'ttt.html')));
 app.get('/dd', (req, res) => res.sendFile(path.join(gamesDir, 'dd.html')));
+app.get('/ular', (req, res) => res.sendFile(path.join(gamesDir, 'ular.html')));
 
 // Static folders
 app.use('/games', express.static(gamesDir));
@@ -141,37 +71,29 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Error 404 & 500 Handlers
 app.use((req, res, next) => {
-    if (req.path === '/favicon.ico' || req.path === '/favicon.png') return res.status(204).end();
-    
+    if (req.path === '/favicon.ico') return res.status(204).end();
     const err404 = path.join(pagesDir, '404.html');
-    if (fs.existsSync(err404)) {
-        res.status(404).sendFile(err404);
-    } else {
-        res.status(404).json({ error: true, message: 'Endpoint not found', path: req.originalUrl });
-    }
+    if (fs.existsSync(err404)) res.status(404).sendFile(err404);
+    else res.status(404).json({ error: true, message: 'Endpoint not found', path: req.originalUrl });
 });
 
 app.use((err, req, res, next) => {
     console.error(chalk.red(err.stack));
-    
     const err500 = path.join(pagesDir, '500.html');
-    if (fs.existsSync(err500)) {
-        res.status(500).sendFile(err500);
-    } else {
-        res.status(500).json({ error: true, message: 'Internal Server Error' });
-    }
+    if (fs.existsSync(err500)) res.status(500).sendFile(err500);
+    else res.status(500).json({ error: true, message: 'Internal Server Error' });
 });
 
 app.listen(PORT, () => {
-    console.log(chalk.bgHex('#90EE90').hex('#333').bold(` Server is running on port ${PORT} `));
+    console.log(chalk.bgHex('#5EEAD4').hex('#0A0E14').bold(` Server is running on port ${PORT} `));
     console.log(chalk.cyan(`
 ╔══════════════════════════════════════╗
-║        Plengers Game Hub - v4.0      ║
+║        Plengers Game Hub - v5.0      ║
 ╠══════════════════════════════════════╣
 ║ Status: ${chalk.green('Online')}                       ║
 ║ Port: ${chalk.yellow(PORT)}                           ║
 ║ URL: ${chalk.blue('https://games.plengers.my.id')}     ║
-║ Routes: /ctr, /ttt, /dd              ║
+║ Routes: /ctr, /ttt, /dd, /ular       ║
 ╚══════════════════════════════════════╝
     `));
 });
