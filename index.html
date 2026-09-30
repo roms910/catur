@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Untuk Dini, dari Aqil 🤍</title>
+<style>
+:root{--bg1:#fff1f3;--bg2:#ffe0e8;--ink:#4a2330;--soft:#8a5566;--card:rgba(255,255,255,.75);--accent:#e0577c;--accent2:#f08aa5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a1420;--bg2:#40202f;--ink:#ffe9ef;--soft:#e0aabb;--card:rgba(255,255,255,.08);--accent:#ff7b9f;--accent2:#ffa9c0}}
+:root[data-theme="dark"]{--bg1:#2a1420;--bg2:#40202f;--ink:#ffe9ef;--soft:#e0aabb;--card:rgba(255,255,255,.08);--accent:#ff7b9f;--accent2:#ffa9c0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2));overflow-x:hidden}
+.hearts{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.hearts span{position:absolute;bottom:-40px;opacity:0;animation:up linear infinite;color:var(--accent2)}
+@keyframes up{0%{transform:translateY(0);opacity:0}10%{opacity:.5}100%{transform:translateY(-110vh);opacity:0}}
+main{position:relative;max-width:560px;margin:0 auto;padding:28px 20px 60px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.card{background:var(--card);backdrop-filter:blur(6px);border-radius:24px;padding:28px 24px;box-shadow:0 10px 30px rgba(224,87,124,.15);animation:in .7s ease both}
+@keyframes in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+h1{font-size:1.7rem;line-height:1.3;margin:0 0 14px;color:var(--accent)}
+p{font-size:1.08rem;line-height:1.75;margin:0 0 14px}
+.small{font-size:.9rem;color:var(--soft)}
+button{font:inherit;cursor:pointer;border:0;border-radius:999px;padding:13px 26px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:1rem;box-shadow:0 6px 16px rgba(224,87,124,.35);transition:transform .2s}
+button:active{transform:scale(.96)}
+a.btn{display:inline-block;text-decoration:none;font-size:1rem;border-radius:999px;padding:13px 26px;background:linear-gradient(135deg,#25b866,#4fd08a);color:#fff;box-shadow:0 6px 16px rgba(37,184,102,.35)}
+button.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--accent2);opacity:.3;transition:.3s}
+.dots i.on{opacity:1;transform:scale(1.3)}
+.flip{perspective:800px;margin:10px 0;cursor:pointer}
+.flip div{position:relative;min-height:74px;transition:transform .6s;transform-style:preserve-3d}
+.flip.open div{transform:rotateY(180deg)}
+.flip b,.flip em{position:absolute;inset:0;display:flex;align-items:center;padding:12px 16px;border-radius:16px;backface-visibility:hidden;font-style:normal;line-height:1.5}
+.flip b{background:var(--card);border:1.5px dashed var(--accent);font-weight:400}
+.flip em{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;transform:rotateY(180deg);font-size:.98rem}
+textarea{width:100%;min-height:110px;border-radius:16px;border:1.5px solid var(--accent2);padding:12px;font:inherit;background:var(--card);color:var(--ink);resize:vertical}
+.reply{margin-top:16px;animation:in .6s both}
+.hide{display:none}
+.big{font-size:3rem;text-align:center;animation:beat 1.4s infinite}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="hearts" id="hearts" aria-hidden="true"></div>
+<main>
+  <div class="dots" id="dots"></div>
+  <div id="stage"></div>
+</main>
+<script>
+var hearts=document.getElementById('hearts');
+for(var i=0;i<10;i++){var s=document.createElement('span');s.textContent='♥';s.style.left=(Math.random()*95)+'%';s.style.fontSize=(12+Math.random()*16)+'px';s.style.animationDuration=(9+Math.random()*9)+'s';s.style.animationDelay=(Math.random()*10)+'s';hearts.appendChild(s);}
+
+var stage=document.getElementById('stage'),dots=document.getElementById('dots'),step=0,TOTAL=5;
+for(var d=0;d<TOTAL;d++){dots.appendChild(document.createElement('i'));}
+
+var items=[
+ ['Aku sering gak peka','Kamu udah kasih kode, kamu udah cerita, tapi aku sering gak nangkep. Padahal harusnya aku dengerin pakai hati, bukan cuma telinga.'],
+ ['Aku kurang perhatian','Kamu selalu nanyain kabarku, ingetin aku, nemenin aku. Aku jarang balas dengan hal yang sama. Itu salahku.'],
+ ['Aku cuma bilang "makasih"','Kamu ngasih banyak, aku cuma bilang makasih. Padahal kamu berhak dapet lebih dari sekadar kata itu: kamu berhak dapet usaha dari aku.']
+];
+
+function esc(t){return t}
+function setDots(){var a=dots.children;for(var i=0;i<a.length;i++){a[i].className=i===step?'on':''}}
+
+function render(){
+ setDots();
+ var h='';
+ if(step===0){
+  h='<div class="card"><div class="big">🤍</div><h1>Dini Nadya Safitri,</h1><p>Ini dari aku, Aqil. Aku bikin halaman kecil ini bukan buat pamer, tapi karena aku pengen ngomong jujur sama kamu, pelan-pelan, tanpa buru-buru.</p><p class="small">Baca sampai selesai ya. Cuma sebentar kok.</p><div class="row"><button onclick="go()">Aku baca ya</button></div></div>';
+ }else if(step===1){
+  h='<div class="card"><h1>Aku sadar, Din…</h1><p>Akhir-akhir ini aku mikirin kamu terus, dan makin lama makin jelas: aku udah banyak banget salah sama kamu. Coba ketuk kartunya satu-satu.</p>';
+  for(var i=0;i<items.length;i++){h+='<div class="flip" onclick="this.classList.toggle(\'open\')"><div><b>'+items[i][0]+'</b><em>'+items[i][1]+'</em></div></div>';}
+  h+='<div class="row"><button onclick="go()">Terus?</button></div></div>';
+ }else if(step===2){
+  h='<div class="card"><h1>Yang aku rasain</h1><p>Kamu udah lebih dari teman, lebih dari sahabat buat aku. Aku sayang banget sama kamu, Din.</p><p>Aku baru ngerti seberapa berartinya kamu justru pas hubungan kita udah di ujung. Itu bodoh, dan aku nyesel banget baru sadar sekarang.</p><p>Aku juga tau aku sering banget bergantung sama orang lain, sampai kadang ngerasa jadi beban. Tapi aku gak mau kamu ngerasa harus terus kuat buat aku. Aku mau belajar berdiri lebih baik, dan gantian jagain kamu.</p><div class="row"><button onclick="go()">Lanjut</button></div></div>';
+ }else if(step===3){
+  h='<div class="card"><h1>Janjiku</h1><p>Aku gak mau janji manis doang. Ini yang bakal aku usahain:</p><p>• Dengerin kamu sampai selesai, gak nyela, gak setengah-setengah.<br>• Nanyain kabarmu duluan, bukan nunggu kamu yang nanya.<br>• Bilang terima kasih <i>dan</i> nunjukin lewat tindakan.<br>• Jujur kalau aku salah, tanpa nunggu kamu capek dulu.</p><p>Kalau ada yang mau kamu tambahin, tulis aja di sini. Aku siap dengerin:</p><textarea id="note" placeholder="Apa yang pengen kamu bilang ke aku, Din?"></textarea><div class="row"><button onclick="go()">Aku udah selesai</button></div></div>';
+ }else{
+  h='<div class="card"><div class="big">💌</div><h1>Dini, maafin aku ya?</h1><p>Maaf atas semua yang bikin kamu capek, kecewa, dan ngerasa sendirian. Aku gak minta kamu langsung lupa. Aku cuma minta kesempatan buat nunjukin kalau aku bisa lebih baik.</p><p>Apa pun jawabanmu, aku hargai. Kamu gak wajib jawab sekarang.</p><div class="row"><button onclick="ans(1)">Aku maafin kamu 🤍</button><button class="ghost" onclick="ans(2)">Aku butuh waktu dulu</button></div><div id="reply"></div><div class="row"><a class="btn" id="wa" target="_blank" rel="noopener" href="'+waLink(0)+'">Balas Aqil lewat WhatsApp 💬</a></div><p class="small" style="margin-top:12px">Tombol ini membuka WhatsApp dengan pesan yang sudah terisi. Kamu bebas mengubahnya sebelum dikirim.</p></div>';
+ }
+ stage.innerHTML=h;
+}
+function go(){step++;render();window.scrollTo(0,0)}
+function ans(n){
+ var w=document.getElementById('wa');if(w)w.href=waLink(n);
+ var r=document.getElementById('reply');
+ r.innerHTML=n===1?'<div class="reply"><p>Makasih banyak, Din. Aku janji gak akan nyia-nyiain kesempatan ini. Yuk kita ngobrol, aku traktir kamu minum kesukaanmu ya ☕🤍</p></div>':'<div class="reply"><p>Iya, Din. Ambil waktu sebanyak yang kamu butuh. Aku bakal tetap di sini, gak akan maksa. Pas kamu siap, kabarin aku aja 🤍</p></div>';
+}
+var NUM='628135790856';
+var MSG=[
+ 'Halo Aqil, aku sudah baca halaman permintaan maafmu. Ini Dini.',
+ 'Aqil, aku sudah baca semuanya. Aku maafin kamu. Yuk kita ngobrol. 🤍',
+ 'Aqil, aku sudah baca semuanya. Makasih ya. Aku butuh waktu dulu, nanti aku kabarin kalau sudah siap.'
+];
+function waLink(n){return 'https://wa.me/'+NUM+'?text='+encodeURIComponent(MSG[n])}
+render();
+</script>
+</body>
+</html>
